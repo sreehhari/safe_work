@@ -3,7 +3,11 @@ import { useState } from "react";
 
 export default function UploadComponent() {
     const [file, setFile] = useState<File | null>(null);
-    const [missingGearCount, setMissingGearCount] = useState<number | null>(null);
+    // const [missingGearCount, setMissingGearCount] = useState<number | null>(null);
+    const [missingHelmetCount, setmissingHelmetCount] = useState<number | null>(0);
+    const [missingJacketCount, setmissingJacketCount] = useState<number | null>(0);
+
+
     const [processing, setProcessing] = useState(false);
 
     const handleUpload = async (endpoint: string) => {
@@ -22,7 +26,10 @@ export default function UploadComponent() {
             if (!res.ok) throw new Error("Failed to process file");
 
             const data = await res.json();
-            setMissingGearCount(data.workers_without_gear);
+            console.log(data);
+            // setMissingGearCount(data.workers_without_gear);
+            setmissingHelmetCount(data.helmet);
+            setmissingJacketCount(data.jacket);
         } catch (error) {
             console.error("Upload error:", error);
         } finally {
@@ -40,11 +47,22 @@ export default function UploadComponent() {
                 Detect Video
             </button>
             {processing && <p>Processing...</p>}
-            {missingGearCount !== null && (
+            {missingHelmetCount  !== null || missingJacketCount!==null && (
                 <p className="mt-4 text-red-500 text-lg font-bold">
-                    Workers Without Gear: {missingGearCount}
+                    {/* Workers Without Gear: {missingGearCount} */}
+                    Workers without helmets :{missingHelmetCount},
+                    Workers without jackets:{missingJacketCount}
+
                 </p>
             )}
+            
+            <p className="mt-4 text-red-500 text-lg font-bold">
+                    {/* Workers Without Gear: {missingGearCount} */}
+                    Workers without helmets :{missingHelmetCount},
+                    Workers without jackets:{missingJacketCount}
+
+                </p>
+
         </div>
     );
 }
