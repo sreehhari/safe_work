@@ -1,12 +1,11 @@
 "use client";
 import { useState } from "react";
-
 export default function UploadComponent() {
     const [file, setFile] = useState<File | null>(null);
     // const [missingGearCount, setMissingGearCount] = useState<number | null>(null);
     const [missingHelmetCount, setmissingHelmetCount] = useState<number | null>(0);
     const [missingJacketCount, setmissingJacketCount] = useState<number | null>(0);
-
+    
 
     const [processing, setProcessing] = useState(false);
 
