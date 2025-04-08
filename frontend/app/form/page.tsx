@@ -7,13 +7,15 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Trash2, Plus, Upload, Camera } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-
+import { createSafetyReport } from "@/lib/actions"
+import {toast} from "sonner"
 const formSchema = z.object({
   siteName: z.string().min(2, {
     message: "Site name must be at least 2 characters.",
@@ -21,51 +23,89 @@ const formSchema = z.object({
   siteLocation: z.string().min(5, {
     message: "Site location must be at least 5 characters.",
   }),
-  inspectorName: z.string().min(2, {
-    message: "Inspector name must be at least 2 characters.",
-  }),
-  inspectionDate: z.string(),
+  // inspectorName: z.string().min(2, {
+  //   message: "Inspector name must be at least 2 characters.",
+  // }),
+  // inspectionDate: z.string(),
   cameras: z
     .array(
       z.object({
         name: z.string().min(1, { message: "Camera name is required" }),
-        location: z.string().min(1, { message: "Camera location is required" }),
+        // location: z.string().min(1, { message: "Camera location is required" }),
       }),
     )
     .min(1, { message: "At least one camera is required" }),
   missingHelmets: z.number().min(0).optional(),
   missingVests: z.number().min(0).optional(),
-  missingGloves: z.number().min(0).optional(),
-  missingBoots: z.number().min(0).optional(),
-  additionalNotes: z.string().optional(),
+  // missingGloves: z.number().min(0).optional(),
+  // missingBoots: z.number().min(0).optional(),
+  // additionalNotes: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function SafetyReportForm() {
   const [files, setFiles] = useState<File[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
+  // const { toast } = useToast()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       siteName: "",
       siteLocation: "",
-      inspectorName: "",
-      inspectionDate: new Date().toISOString().split("T")[0],
-      cameras: [{ name: "", location: "" }],
-      missingHelmets: 0,
-      missingVests: 0,
-      missingGloves: 0,
-      missingBoots: 0,
-      additionalNotes: "",
+      // inspectorName: "",
+      cameras: [{ name: ""}],
+
+  
     },
   })
 
-  function onSubmit(values: FormValues) {
-    // In a real application, you would handle the form submission here
-    // including uploading the files to a server
-    console.log(values, files)
-    alert("Form submitted successfully!")
+  async function onSubmit(values: FormValues) {
+    try {
+      setIsSubmitting(true)
+
+      // Call the server action to create the safety report and process files
+      const result = await createSafetyReport(values, files)
+
+      if (result.success) {
+        // toast({
+        //   title: "Report submitted successfully",
+        //   description: `Report ID: ${result.reportId}`,
+        // })
+        toast("Report Submitted successfully",{
+          description:`Report ID: ${result.siteId}`
+        })
+
+        // Reset the form
+        form.reset()
+        setFiles([])
+
+        // Optionally redirect to a success page or report details page
+        // router.push(`/reports/${result.reportId}`)
+      } else {
+        // toast({
+        //   title: "Error submitting report",
+        //   description: result.error || "An unknown error occurred",
+        //   variant: "destructive",
+        // })
+        toast.warning("Error submitting report",{
+          description:result.error || "An unknown error occurred"
+        })
+      }
+    } catch (error) {
+      // toast({
+      //   title: "Error submitting report",
+      //   description: (error as Error).message || "An unknown error occurred",
+      //   variant: "destructive",
+      // })
+      toast.warning("Error submitting report",{
+        description:(error as Error).message || "An unknown error occurred"
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,6 +120,7 @@ export default function SafetyReportForm() {
   }
 
   return (
+
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <Card>
@@ -117,32 +158,8 @@ export default function SafetyReportForm() {
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="inspectorName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Inspector Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="inspectionDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Inspection Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
+
             </div>
           </CardContent>
         </Card>
@@ -169,7 +186,7 @@ export default function SafetyReportForm() {
                       </FormItem>
                     )}
                   />
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name={`cameras.${index}.location`}
                     render={({ field }) => (
@@ -181,7 +198,7 @@ export default function SafetyReportForm() {
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  /> */}
                   {index > 0 && (
                     <Button
                       type="button"
@@ -207,7 +224,7 @@ export default function SafetyReportForm() {
                 variant="outline"
                 onClick={() => {
                   const currentCameras = form.getValues("cameras")
-                  form.setValue("cameras", [...currentCameras, { name: "", location: "" }])
+                  form.setValue("cameras", [...currentCameras, { name: "" }])
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -217,10 +234,15 @@ export default function SafetyReportForm() {
           </CardContent>
         </Card>
 
+
+{/*file upload goes here*/}
+
         <Card>
           <CardHeader>
             <CardTitle>Upload Photos/Videos</CardTitle>
-            <CardDescription>Upload photos or videos from the construction site for safety analysis.</CardDescription>
+            <CardDescription>
+              Upload photos or videos from the construction site for safety analysis with YOLOv8.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -243,7 +265,7 @@ export default function SafetyReportForm() {
                     Browse
                   </Label>
                 </div>
-                <p className="text-sm text-muted-foreground">Supported formats: JPG, PNG, MP4, MOV</p>
+                <p className="text-sm text-muted-foreground">Supported formats: JPG, MP4</p>
               </div>
 
               {files.length > 0 && (
@@ -268,90 +290,9 @@ export default function SafetyReportForm() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Safety Gear Violations</CardTitle>
-            <CardDescription>Record the number of safety gear violations observed.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="missingHelmets"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Missing Helmets</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number.parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="missingVests"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Missing Safety Vests</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number.parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="missingGloves"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Missing Gloves</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number.parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="missingBoots"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Missing Safety Boots</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number.parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
+{/* file upload ends here */}
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Additional Notes</CardTitle>
             <CardDescription>Add any additional observations or notes about the safety inspection.</CardDescription>
@@ -375,13 +316,19 @@ export default function SafetyReportForm() {
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full md:w-auto">
-              Submit Safety Report
+            <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit Safety Report"}
             </Button>
           </CardFooter>
-        </Card>
+        </Card> */}
+                  <CardFooter>
+            <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit Safety Report"}
+            </Button>
+          </CardFooter>
       </form>
     </Form>
+  
   )
 }
 

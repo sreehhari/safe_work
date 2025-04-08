@@ -71,26 +71,43 @@ model VerificationToken {
 }
 
 model Site {
-  id         String       @id @default(cuid())
-  name       String
-  location   String
-  userId     String
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sitePoints Site_point[]
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id          String         @id @default(cuid())
+  name        String
+  location    String
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sitePoints  Site_point[]
+  missingGear Yolo_results[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@map("site")
 }
 
 model Site_point {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   name      String // Name or identifier for the camera location
   siteId    String
-  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  site      Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  faults    Yolo_results[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@unique([siteId, name]) // Ensures unique site points per site
   @@map("sitepoint")
+}
+
+model Yolo_results {
+  id      String @id @default(cuid())
+  helmets Int    @default(0)
+  vests   Int    @default(0)
+  siteId  String
+  site    Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  sitePointId   String
+  spot_location Site_point @relation(fields: [sitePointId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("results")
 }

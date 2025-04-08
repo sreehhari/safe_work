@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  experimental:{
-    serverActions:true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100mb', // or go full giga-chad with '100mb'
+    },
   },
 };
 
