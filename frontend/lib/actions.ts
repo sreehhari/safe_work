@@ -6,7 +6,19 @@ import {prisma} from "@/prisma"
 import { auth } from "@/auth"
 import { promises } from "dns"
 import { POST } from "@/app/api/auth/[...nextauth]/route"
+import PDFDocument from 'pdfkit'
+import path from "path"
+import fs from 'fs'
 
+type ReportDetails = {
+  siteName: string;
+  cameraPoint: string;
+  date: string;
+  time: string;
+  helmetMissing: number;
+  jacketMissing: number;
+  totalMissing: number;
+};
 interface CameraData{
   name:string
     // location:string
@@ -18,7 +30,7 @@ interface SafetyReportFormData{
   cameras:CameraData[]
 }
 
-export async function createSafetyReport(formData:SafetyReportFormData, files:File[]):Promise<{success:boolean;error?:string;siteId?:string}> {
+export async function createSafetyReport(formData:SafetyReportFormData, files:File[]):Promise<{success:boolean;error?:string;siteId?:string;pdfUrl?: string}> {
   try {
 
     const session = await auth();
@@ -46,7 +58,7 @@ export async function createSafetyReport(formData:SafetyReportFormData, files:Fi
       })
     }
 
-
+    let pdfUrl = undefined;
 
     // 2. Send the files to the FastAPI endpoint for YOLOv8 processing
     if (files.length > 0) {
@@ -69,13 +81,6 @@ export async function createSafetyReport(formData:SafetyReportFormData, files:Fi
         throw new Error("Unsupported file format.Only images and videos are allowed")
       }
 
-      // Add the report ID to link the analysis results
-      // formDataForAPI.append('report_id', report.id)
-      
-      // Add all files to the FormData
-      // files.forEach((file, index) => {
-      //   formDataForAPI.append(`file_${index}`, file)
-      // })
       const res = await fetch(`http://127.0.0.1:8000${endpoint}`,{
         method:"POST",
         body:formDataForAPI
@@ -104,25 +109,59 @@ export async function createSafetyReport(formData:SafetyReportFormData, files:Fi
         }
       })
 
-
-      // // Send to FastAPI endpoint
-      // const response = await fetch('https://your-fastapi-endpoint.com/analyze', {
-      //   method: 'POST',
-      //   body: formDataForAPI,
-      // })
-
-      // if (!response.ok) {
-      //   throw new Error('Failed to process images/videos with YOLOv8')
-      // }
-
-      // Optional: Get the analysis results from the API
-      // const analysisResults = await response.json()
+      // Generate PDF
+      const fontPath = path.join(process.cwd(), 'lib/fonts/Helvetica.ttf'); // Adjust to your font file name
+      console.log('Font path:', fontPath); // Debug: Check the path
+      if (!fs.existsSync(fontPath)) {
+        throw new Error(`Font file not found at ${fontPath}`);
+      }
+      const doc = new PDFDocument({
+        size: 'A4',
+        margin: 50
+      });
+      // Test if font loading works
+      doc.registerFont('CustomHelvetica', fontPath);
+      doc.font('CustomHelvetica'); // Use the registered font      // Buffer to store PDF data
+      const buffers: Buffer[] = [];
+      doc.on('data', buffers.push.bind(buffers));
       
-      // You could update the report with the analysis results if needed
+      // PDF content
+      const date = new Date();
+      const dateStr = date.toLocaleDateString();
+      const timeStr = date.toLocaleTimeString();
+
+      doc
+        .fontSize(20)
+        .text('🦺 SAFETY GEAR VIOLATION REPORT', { align: 'center' })
+        .moveDown(2);
+
+      doc
+        .fontSize(14)
+        .text(`📍 Site: ${site.name}`)
+        .text(`📍 Location: ${formData.siteLocation}`)
+        .text(`📹 Camera Point: ${sitePoint.name}`)
+        .text(`📅 Date: ${dateStr}`)
+        .text(`⏰ Time: ${timeStr}`)
+        .moveDown(1);
+
+      doc
+        .text(`🚫 Helmet Missing: ${data.helmet}`)
+        .text(`🚫 Jacket Missing: ${data.jacket}`)
+        .moveDown(1)
+        .fontSize(16)
+        .text(`❗ Total Violations: ${data.helmet + data.jacket}`, { align: 'center' });
+
+      doc.end();
+
+      // Convert buffer to base64 for client-side download
+      const pdfBuffer = Buffer.concat(buffers);
+      pdfUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
     }
 
+console.log(pdfUrl)
+
     revalidatePath('/')
-    return { success: true, siteId:site.id}
+    return { success: true, siteId:site.id,pdfUrl}
   } catch (error) {
     console.error('Error creating safety report:', error)
     return { success: false, error: (error as Error).message }

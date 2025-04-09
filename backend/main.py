@@ -75,6 +75,18 @@ async def detect_image(file: UploadFile = File(...)):
                 "class": model.names[int(box.cls)],
                 "bbox": box.xyxy.tolist()[0]
             })
+    # detections = []
+    # for result in results:
+    #     for box in result.boxes:
+    #         class_id = int(box.cls)
+    #         class_name = model.names[class_id]
+    #         bbox = box.xyxy.tolist()[0]
+    #         detections.append({
+    #             "class": class_name,
+    #             "bbox": bbox
+    #         })
+            
+            
     total_missing_gear["helmet"]=count_workers_without_gear(detections).get("helmet",0)
     total_missing_gear["jacket"]=count_workers_without_gear(detections).get("jacket",0)
     os.remove(image_path)

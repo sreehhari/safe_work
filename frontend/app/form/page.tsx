@@ -69,7 +69,14 @@ export default function SafetyReportForm() {
       // Call the server action to create the safety report and process files
       const result = await createSafetyReport(values, files)
 
-      if (result.success) {
+      if (result.success && result.pdfUrl) {
+
+        const link = document.createElement('a');
+        link.href = result.pdfUrl;
+        link.download = `safety_report_${Date.now()}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         // toast({
         //   title: "Report submitted successfully",
         //   description: `Report ID: ${result.reportId}`,

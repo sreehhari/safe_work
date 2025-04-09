@@ -8,7 +8,6 @@ export default function Home() {
   // if(!session) redirect("/signin")
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
-    <UploadComponent />
 </div>
   );
 }
