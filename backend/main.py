@@ -107,7 +107,7 @@ async def detect_video(file: UploadFile = File(...)):
         ffmpeg.input(video_path)
         .filter("fps", fps=1)
         .output(f"{frames_dir}/frame_%04d.jpg")
-        .run(capture_output=True)
+        .run()
     )
 
     frames = sorted(os.listdir(frames_dir))
