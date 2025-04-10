@@ -11,21 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 
-export default async function ReportDetailsPage() {
+export default async function ReportDetailsPage({ params }: { params: { id: string } }) {
   const session = await auth()
 
   if (!session?.user) {
     return notFound()
   }
 
-  const report = await prisma.yolo_results.findFirst({
+  const report = await prisma.yolo_results.findUnique({
     where: {
-      site: {
-        userId: session.user.id,
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
+      id: params.id,
     },
     include: {
       site: true,
@@ -33,7 +28,7 @@ export default async function ReportDetailsPage() {
     },
   })
 
-  if (!report) {
+  if (!report || report.site.userId !== session.user.id) {
     return notFound()
   }
 
